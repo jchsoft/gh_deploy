@@ -1,4 +1,6 @@
 require 'yaml'
+require 'logger'
+
 require_relative '../lib/symbolize_hash'
 
 
