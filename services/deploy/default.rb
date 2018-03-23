@@ -1,12 +1,19 @@
+# frozen_string_literal: true
+
 module Services
   module Deploy
     class Default
-      class << self
-        def update_project
-          Dir.chdir($config[:project][:path]) do
-            output = `git pull`
+      # @param [Symbol] :project
+      def self.update(project)
+        Dir.chdir($config[:projects][project][:path]) do
+          $config[:projects][project][:commands].each do |command|
+            if command.key?(:run)
+              $logger.debug `#{command[:run]}`
+              return false, "#{command[:run]} failed" if $CHILD_STATUS.exitstatus
+            end
           end
         end
+        [true, 'all is OK']
       end
     end
   end
