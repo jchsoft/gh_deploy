@@ -11,7 +11,7 @@ post '/event_handler/:project' do
   halt NOT_FOUND, "#{params['project']} not found!" unless $config[:projects][params['project'].to_sym]
   halt BAD_REQUEST, "payload in data not found!" unless params['payload']
   payload = JSON.parse(params['payload'])
-  $logger.info "payload: #{payload.inspect}"
+  $logger.info "payload commit: #{payload['commit'].inspect}"
 
   halt OK, 'not a circleCi success' unless Services::Deploy::Default.circle_ci_success?(payload)
   halt OK, 'not a master branch' unless Services::Deploy::Default.master_branch?(payload['branches'])

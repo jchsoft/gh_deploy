@@ -5,14 +5,22 @@ server:
   port: 6873
 
 projects:
-  vlt2_admin:
-    path: '/var/www/ror/vlt2_mobile'
+  vlt_II_admin:
+    path: '/var/www/ror/vlt2_admin'
     commands:
       # manually use "git config credential.helper store" and than "git pull" to save credentials for next time
       - run: 'git pull'
-      - run: 'bundle update'
-      - run: 'rake db:migrate RAILS_ENV=production'
-      # use "sudo visudo" and add "josefchmel ALL=(ALL) NOPASSWD:ALL" to the end to disable password check on each sudo command "%wheel ..." for all sudoers
+      - run: 'bundle install'
+      - run: 'RAILS_ENV=production rake db:migrate'
+      - run: 'RAILS_ENV=production rake assets:precompile '
+      # use "sudo visudo" and add "username ALL=(ALL) NOPASSWD:ALL" to the end to disable password check on each sudo command "%wheel ..." for all sudoers
+      - run: 'sudo systemctl restart puma_vlt2_admin.service'
+  vlt_II_mobile:
+    path: '/var/www/ror/vlt2_mobile'
+    commands:
+      - run: 'git pull'
+      - run: 'bundle install'
+      - run: 'RAILS_ENV=production rake db:migrate'
       - run: 'sudo systemctl restart puma_vlt2_mobile.service'
 
 

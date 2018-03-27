@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require 'mail'
 
 module Services
   module Deploy
@@ -21,32 +22,33 @@ module Services
           Thread.new do
             Dir.chdir($config[:projects][project][:path]) do
               $logger.debug Dir.getwd
-              message = ""
+              deploy_failed = false
               $config[:projects][project][:commands].each do |command|
                 if command.key?('run')
                   $logger.debug `#{command['run']}`
                   if $?.exitstatus.to_i != 0
                     Services::Deploy::Default.send_email(payload, failed_command: command['run'], exitstatus: $?.exitstatus)
+                    deploy_failed = true
                     break
                   end
                 end
               end
-              Services::Deploy::Default.send_email payload
+              Services::Deploy::Default.send_email payload unless deploy_failed
             end
           end
-          'all is OK!'
+          'Deployment started!'
         end
 
         def send_email(payload, failed_command: nil, exitstatus: nil)
-
-          subject_text = "Deployment of #{payload['repository']['name']} #{failed_command ? 'failed on ': 'was'} #{failed_command || 'successful'} #{"with exitstatus #{exitstatus}" if exitstatus}!"
+          subject_text = "Deployment of #{payload['repository']['name']} #{failed_command ? 'failed on ': 'was'} #{failed_command || 'successful'}#{" with exitstatus #{exitstatus}" if exitstatus}!"
           Mail.deliver do
             from     "notification@jchsoft.cz"
-            to       'chmel@jchsoft.cz'
+            to       payload['commit']['commit']['author']['email']
             subject  subject_text
             body     JSON.pretty_generate(payload['commit'])
-          end if $all_gateways.count > 1
+          end
         end
+
       end
 
     end

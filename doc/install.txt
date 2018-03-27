@@ -1,3 +1,6 @@
 # to debug remotely, run as: ruby main.rb -o 0.0.0.0
 
 # catch "Statuses" webhooks events - NOT pushes
+
+# use "sudo visudo" and add "username ALL=(ALL) NOPASSWD:ALL" to the end to disable password check on each sudo command "%wheel ..." for all sudoers
+
