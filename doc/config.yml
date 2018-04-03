@@ -1,9 +1,6 @@
 # catch "Statuses" webhooks events - NOT pushes
 
 # to debug remotely, run as: ruby main.rb -o 0.0.0.0
-server:
-  port: 6873
-
 projects:
   vlt_II_admin:
     path: '/var/www/ror/vlt2_admin'

@@ -1,0 +1,15 @@
+# /usr/lib/systemd/system/ruby_gh_deploy.service
+[Unit]
+Description=Deploy Sinatra Ruby Server
+
+[Service]
+Type=simple
+User=josefchmel
+WorkingDirectory=/var/www/ror/gh_deploy
+Environment=SECRET_KEY_BASE=59d0dc12720d7d3719c28aabfd7352efa91f9b3ee028062218cdb74ed15fe9e1d33a4e1b819842fc367f8c45f49b16371353ff092f20ac5b49c4bd899ceb735d
+ExecStart=/home/josefchmel/.rvm/bin/gh_deploy_ruby main.rb
+TimeoutSec=15
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
