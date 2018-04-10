@@ -71,12 +71,19 @@ module Services
       commit = @payload['commit']['commit']['message']
 
       uri = URI($config[:projects][@project.to_sym][:slack][:notif_url])
-      req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
-      req.body = {text: "#{subject_text}\n#{commit}\n#{author}"}.to_json
-      res = Net::HTTP.start(uri.hostname, uri.port) do |http|
-        http.request(req)
-      end
-      $logger.debug "slack response: #{res.inspect}"
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      request = Net::HTTP::Post.new(uri)
+      request.body = {
+        text: subject_text,
+        attachments: [
+          title: author,
+          text: commit
+        ]
+      }.to_json
+      response = http.request(request)
+
+      $logger.debug "slack response: #{response.inspect}"
     end
   end
 end
