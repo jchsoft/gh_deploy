@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 require 'mail'
+require 'net/http'
+require 'uri'
+require 'json'
 
 module Services
   class Deploy
@@ -39,6 +42,7 @@ module Services
             end
           end
           send_email unless deploy_failed
+          notify_slack unless deploy_failed
         end
       end
       'Deployment started!'
@@ -58,5 +62,21 @@ module Services
       end
     end
 
+    def notify_slack
+      return unless $config[:projects][@project.to_sym][:slack]
+      return unless $config[:projects][@project.to_sym][:slack][:use]
+
+      subject_text = "Deployment of #{@payload['repository']['name']} was successful!"
+      author = @payload['commit']['commit']['author']['email']
+      commit = @payload['commit']['commit']['message']
+
+      uri = URI($config[:projects][@project.to_sym][:slack][:notif_url])
+      req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
+      req.body = {text: "#{subject_text}\n#{commit}\n#{author}"}.to_json
+      res = Net::HTTP.start(uri.hostname, uri.port) do |http|
+        http.request(req)
+      end
+      $logger.debug "slack response: #{res}"
+    end
   end
 end
