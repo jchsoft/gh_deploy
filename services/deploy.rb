@@ -76,7 +76,7 @@ module Services
       res = Net::HTTP.start(uri.hostname, uri.port) do |http|
         http.request(req)
       end
-      $logger.debug "slack response: #{res}"
+      $logger.debug "slack response: #{res.inspect}"
     end
   end
 end
