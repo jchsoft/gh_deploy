@@ -19,7 +19,7 @@ module Services
     end
 
     def circle_ci_success?
-      @payload['context'] == 'ci/circleci' && @payload['state'] == 'success'
+      @payload['context'] == 'ci/circleci: build' && @payload['state'] == 'success'
     end
 
     def right_branch?
