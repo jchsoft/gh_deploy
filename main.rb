@@ -17,7 +17,7 @@ post '/event_handler/:project' do
   deploy = Services::Deploy.new params['project'], payload
 
   halt OK, 'not a circleCi success' unless deploy.circle_ci_success?
-  halt OK, 'not a master branch' unless deploy.right_branch?
+  halt OK, 'not a right branch' unless deploy.right_branch?
 
   deploy.update!
 end
