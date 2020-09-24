@@ -4,6 +4,7 @@
 projects:
   vlt_II_admin:
     path: '/var/www/ror/vlt2_admin'
+    branch: 'master'
     commands:
       # manually use "git config credential.helper store" and than "git pull" to save credentials for next time
       - run: 'git pull'
@@ -14,6 +15,7 @@ projects:
       - run: 'sudo systemctl restart puma_vlt2_admin.service'
   vlt_II_mobile:
     path: '/var/www/ror/vlt2_mobile'
+    branch: 'master'
     commands:
       - run: 'git pull'
       - run: 'bundle install'
