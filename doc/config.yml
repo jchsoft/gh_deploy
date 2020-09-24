@@ -7,12 +7,14 @@ projects:
     branch: 'master'
     commands:
       # manually use "git config credential.helper store" and than "git pull" to save credentials for next time
+      # or better create ssh key and upload id_rs.pub to github as deploy key (readonly)
       - run: 'git pull'
-      - run: 'bundle install'
-      - run: 'RAILS_ENV=production rake db:migrate'
-      - run: 'RAILS_ENV=production rake assets:precompile '
+      - run: "sudo runuser -l vector -c 'cd /var/www/ror/projectoid_ii; bundle install'"
+      - run: "sudo runuser -l vector -c 'cd /var/www/ror/projectoid_ii; RAILS_ENV=production SECRET_KEY_BASE=59d0dc12720d7d3719c28aabfd7352efa91f9b3ee028062218cdb74ed15fe9e1d33a4e1b819842fc367f8c45f49b16371353ff092f20ac5b49c4bd899ceb735d rake db:migrate'"
+      - run: "sudo runuser -l vector -c 'cd /var/www/ror/projectoid_ii; RAILS_ENV=production SECRET_KEY_BASE=59d0dc12720d7d3719c28aabfd7352efa91f9b3ee028062218cdb74ed15fe9e1d33a4e1b819842fc367f8c45f49b16371353ff092f20ac5b49c4bd899ceb735d rake db:seed'"
+      - run: "sudo runuser -l vector -c 'cd /var/www/ror/projectoid_ii; RAILS_ENV=production SECRET_KEY_BASE=59d0dc12720d7d3719c28aabfd7352efa91f9b3ee028062218cdb74ed15fe9e1d33a4e1b819842fc367f8c45f49b16371353ff092f20ac5b49c4bd899ceb735d rake assets:precompile'"
       # use "sudo visudo" and add "username ALL=(ALL) NOPASSWD:ALL" to the end to disable password check on each sudo command "%wheel ..." for all sudoers
-      - run: 'sudo systemctl restart puma_vlt2_admin.service'
+      - run: 'sudo systemctl restart puma_vector.service'
   vlt_II_mobile:
     path: '/var/www/ror/vlt2_mobile'
     branch: 'master'
