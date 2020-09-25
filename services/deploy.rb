@@ -4,6 +4,11 @@ require 'net/http'
 require 'uri'
 require 'json'
 
+# From Rails: config.action_mailer.smtp_settings = { openssl_verify_mode: OpenSSL::SSL::VERIFY_NONE }
+Mail.defaults do
+  delivery_method :smtp, openssl_verify_mode: OpenSSL::SSL::VERIFY_NONE
+end
+
 module Services
   class Deploy
 
@@ -51,7 +56,7 @@ module Services
     private
 
     def send_email(failed_command: nil, exitstatus: nil)
-      subject_text = "Deployment of #{@payload['repository']['name']} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{" with exitstatus #{exitstatus}" if exitstatus}!"
+      subject_text = "Deployment of #{@payload['repository']['name']} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{" with exitstatus #{exitstatus}" if exitstatus}!"
       author = @payload['commit']['commit']['author']['email']
       commit = @payload['commit']
       Mail.deliver do
