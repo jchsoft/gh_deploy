@@ -56,7 +56,7 @@ module Services
     private
 
     def send_email(failed_command: nil, exitstatus: nil)
-      subject_text = "Deployment of #{@payload['repository']['name']} #{@project} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{" with exitstatus #{exitstatus}" if exitstatus}!"
+      subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{" with exitstatus #{exitstatus}" if exitstatus}!"
       author = @payload['commit']['commit']['author']['email']
       commit = @payload['commit']['commit']
       Mail.deliver do
