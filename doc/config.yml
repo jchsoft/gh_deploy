@@ -26,3 +26,5 @@ projects:
 
 
 log_to: STDOUT # possible values: STDOUT, STDERR, FILE
+mail_to:
+  - 'chmel@jchsoft.cz'

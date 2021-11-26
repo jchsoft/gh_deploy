@@ -61,7 +61,7 @@ module Services
       commit = @payload['commit']['commit']
       Mail.deliver do
         from "notification@jchsoft.cz"
-        to author
+        to ($config[:mail_to] << author).uniq
         subject subject_text
         body JSON.pretty_generate(commit)
       end
