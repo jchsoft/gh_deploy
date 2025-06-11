@@ -68,15 +68,24 @@ post '/event_handler/:project' do
 
   when 'workflow_run'
     # Handle GitHub Actions workflow_run events
-    payload_body = request.body.read
+    
+    # Handle both raw JSON and URL-encoded form data
+    if params['payload']
+      # URL-encoded form data (GitHub webhook configuration sends payload parameter)
+      payload = JSON.parse(params['payload'])
+      signature_body = params['payload']
+    else
+      # Raw JSON (direct webhook)
+      payload_body = request.body.read
+      payload = JSON.parse(payload_body)
+      signature_body = payload_body
+    end
 
     # Optional signature validation
     signature = request.env['HTTP_X_HUB_SIGNATURE_256']
-    unless verify_signature(payload_body, signature)
+    unless verify_signature(signature_body, signature)
       halt UNAUTHORIZED, { error: 'Invalid webhook signature' }.to_json
     end
-
-    payload = JSON.parse(payload_body)
     $logger.info "workflow_run payload: action=#{payload['action']}, conclusion=#{payload['workflow_run']['conclusion']}, event=#{payload['workflow_run']['event']}"
     $logger.info "workflow name: #{payload['workflow_run']['name']}, repository: #{payload['repository']['full_name']}"
 
