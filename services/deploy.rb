@@ -18,17 +18,39 @@ module Services
 
     # @param [String] project
     # @param [Hash] payload from GitHub
-    def initialize(project, payload)
+    # @param [String] ci_type either 'circleci' or 'github_actions'
+    def initialize(project, payload, ci_type = 'circleci')
       @project = project
       @payload = payload
+      @ci_type = ci_type
     end
 
     def circle_ci_success?
       @payload['context'] == 'ci/circleci: build' && @payload['state'] == 'success'
     end
 
+    def github_actions_success?
+      workflow_run = @payload['workflow_run']
+      return false unless workflow_run
+
+      @payload['action'] == 'completed' &&
+        workflow_run['conclusion'] == 'success' &&
+        workflow_run['event'] == 'push'
+    end
+
     def right_branch?
-      @payload['branches'].select { |k| k['name'] == $config[:projects][@project.to_sym][:branch] }.any?
+      case @ci_type
+      when 'circleci'
+        @payload['branches'].select { |k| k['name'] == $config[:projects][@project.to_sym][:branch] }.any?
+      when 'github_actions'
+        workflow_run = @payload['workflow_run']
+        return false unless workflow_run
+        
+        target_branch = $config[:projects][@project.to_sym][:branch]
+        workflow_run['head_branch'] == target_branch
+      else
+        false
+      end
     end
 
     def update!
@@ -57,8 +79,19 @@ module Services
 
     def send_email(failed_command: nil, exitstatus: nil)
       subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{" with exitstatus #{exitstatus}" if exitstatus}!"
-      author = @payload['commit']['commit']['author']['email']
-      commit = @payload['commit']['commit']
+      
+      case @ci_type
+      when 'circleci'
+        author = @payload['commit']['commit']['author']['email']
+        commit = @payload['commit']['commit']
+      when 'github_actions'
+        author = @payload['workflow_run']['head_commit']['author']['email']
+        commit = @payload['workflow_run']['head_commit']
+      else
+        author = 'unknown@example.com'
+        commit = {}
+      end
+
       Mail.deliver do
         from "notification@jchsoft.cz"
         to ($config[:mail_to] << author).uniq
@@ -72,10 +105,23 @@ module Services
       return unless $config[:projects][@project.to_sym][:slack][:use]
 
       subject_text = "Deployment of #{@payload['repository']['name']} was successful!"
-      author = @payload['commit']['commit']['author']['email']
-      commit = @payload['commit']['commit']['message']
+      
+      case @ci_type
+      when 'circleci'
+        author = @payload['commit']['commit']['author']['email']
+        commit = @payload['commit']['commit']['message']
+      when 'github_actions'
+        author = @payload['workflow_run']['head_commit']['author']['email']
+        commit = @payload['workflow_run']['head_commit']['message']
+      else
+        author = 'unknown@example.com'
+        commit = 'Unknown commit'
+      end
 
-      uri = URI($config[:projects][@project.to_sym][:slack][:notif_url])
+      notif_url = $config[:projects][@project.to_sym][:slack][:notif_url]
+      return unless notif_url
+
+      uri = URI(notif_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
       request = Net::HTTP::Post.new(uri)
