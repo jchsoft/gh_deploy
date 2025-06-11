@@ -1,4 +1,7 @@
 # frozen_string_literal: true
+
+require 'English'
+
 require 'mail'
 require 'net/http'
 require 'uri'
@@ -10,10 +13,9 @@ Mail.defaults do
 end
 
 module Services
+  # Handles deployment operations for CI/CD webhooks
   class Deploy
-
     class << self
-
     end
 
     # @param [String] project
@@ -41,11 +43,11 @@ module Services
     def right_branch?
       case @ci_type
       when 'circleci'
-        @payload['branches'].select { |k| k['name'] == $config[:projects][@project.to_sym][:branch] }.any?
+        @payload['branches'].any? { |k| k['name'] == $config[:projects][@project.to_sym][:branch] }
       when 'github_actions'
         workflow_run = @payload['workflow_run']
         return false unless workflow_run
-        
+
         target_branch = $config[:projects][@project.to_sym][:branch]
         workflow_run['head_branch'] == target_branch
       else
@@ -59,14 +61,14 @@ module Services
           $logger.debug Dir.getwd
           deploy_failed = false
           $config[:projects][@project.to_sym][:commands].each do |command|
-            if command.key?('run')
-              $logger.debug `#{command['run']}`
-              if $?.exitstatus.to_i != 0
-                send_email failed_command: command['run'], exitstatus: $?.exitstatus
-                deploy_failed = true
-                break
-              end
-            end
+            next unless command.key?('run')
+
+            $logger.debug `#{command['run']}`
+            next unless $CHILD_STATUS.exitstatus.to_i != 0
+
+            send_email failed_command: command['run'], exitstatus: $CHILD_STATUS.exitstatus
+            deploy_failed = true
+            break
           end
           send_email unless deploy_failed
           notify_slack unless deploy_failed
@@ -78,8 +80,10 @@ module Services
     private
 
     def send_email(failed_command: nil, exitstatus: nil)
-      subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{" with exitstatus #{exitstatus}" if exitstatus}!"
-      
+      subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{if exitstatus
+                                                                                                                                                                              " with exitstatus #{exitstatus}"
+                                                                                                                                                                            end}!"
+
       case @ci_type
       when 'circleci'
         author = @payload['commit']['commit']['author']['email']
@@ -93,7 +97,7 @@ module Services
       end
 
       Mail.deliver do
-        from "notification@jchsoft.cz"
+        from 'notification@jchsoft.cz'
         to ($config[:mail_to] << author).uniq
         subject subject_text
         body JSON.pretty_generate(commit)
@@ -105,7 +109,7 @@ module Services
       return unless $config[:projects][@project.to_sym][:slack][:use]
 
       subject_text = "Deployment of #{@payload['repository']['name']} was successful!"
-      
+
       case @ci_type
       when 'circleci'
         author = @payload['commit']['commit']['author']['email']

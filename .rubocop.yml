@@ -1,0 +1,25 @@
+AllCops:
+  SuggestExtensions: false
+  NewCops: enable
+
+# Test files can be longer
+Metrics/ClassLength:
+  Exclude:
+    - 'test/**/*'
+
+Metrics/MethodLength:
+  Exclude:
+    - 'test/**/*'
+
+# Global variables are used for config in this codebase
+Style/GlobalVars:
+  Exclude:
+    - 'test/**/*'
+    - 'app/config.rb'
+    - 'main.rb'
+    - 'services/deploy.rb'
+
+# Allow empty class for now
+Lint/EmptyClass:
+  Exclude:
+    - 'services/deploy.rb'

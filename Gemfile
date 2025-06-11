@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 source 'https://rubygems.org'
+gem 'mail'
 gem 'puma'
 gem 'sinatra'
-gem 'mail'
 
 gem 'rubocop'
 
 group :test do
-  gem 'rack-test'
   gem 'minitest'
+  gem 'rack-test'
 end

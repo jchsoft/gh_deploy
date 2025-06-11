@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
 require 'rack/test'
 require 'json'
@@ -25,34 +27,34 @@ class WebhookTest < Minitest::Test
         test_project: {
           branch: 'main',
           path: '/tmp/test',
-          commands: [{'run' => 'echo "test deploy"'}]
+          commands: [{ 'run' => 'echo "test deploy"' }]
         }
       },
       mail_to: ['test@example.com'],
       github_webhook_secret: nil # Disable signature validation for tests
     }
-    
+
     # Mock logger
-    $logger = Logger.new('/dev/null')
+    $logger = Logger.new(File::NULL)
   end
 
   def test_circleci_success_webhook
     circleci_payload = {
       context: 'ci/circleci: build',
       state: 'success',
-      branches: [{'name' => 'main'}],
+      branches: [{ 'name' => 'main' }],
       commit: {
         commit: {
-          author: {email: 'dev@example.com'},
+          author: { email: 'dev@example.com' },
           message: 'Test commit'
         }
       },
-      repository: {name: 'test-repo'}
+      repository: { name: 'test-repo' }
     }
 
     post '/event_handler/test_project',
-         {payload: circleci_payload.to_json},
-         {'HTTP_X_GITHUB_EVENT' => 'status'}
+         { payload: circleci_payload.to_json },
+         { 'HTTP_X_GITHUB_EVENT' => 'status' }
 
     puts "Response: #{last_response.status} - #{last_response.body}" if last_response.status != 200
     assert_equal 200, last_response.status
@@ -61,14 +63,14 @@ class WebhookTest < Minitest::Test
 
   def test_circleci_wrong_context
     circleci_payload = {
-      context: 'ci/travis: build',  # Wrong context
+      context: 'ci/travis: build', # Wrong context
       state: 'success',
-      branches: [{'name' => 'main'}]
+      branches: [{ 'name' => 'main' }]
     }
 
     post '/event_handler/test_project',
-         {payload: circleci_payload.to_json},
-         {'HTTP_X_GITHUB_EVENT' => 'status'}
+         { payload: circleci_payload.to_json },
+         { 'HTTP_X_GITHUB_EVENT' => 'status' }
 
     assert_equal 200, last_response.status
     assert_equal 'not a circleCi success', last_response.body
@@ -78,12 +80,12 @@ class WebhookTest < Minitest::Test
     circleci_payload = {
       context: 'ci/circleci: build',
       state: 'success',
-      branches: [{'name' => 'develop'}]  # Wrong branch
+      branches: [{ 'name' => 'develop' }] # Wrong branch
     }
 
     post '/event_handler/test_project',
-         {payload: circleci_payload.to_json},
-         {'HTTP_X_GITHUB_EVENT' => 'status'}
+         { payload: circleci_payload.to_json },
+         { 'HTTP_X_GITHUB_EVENT' => 'status' }
 
     assert_equal 200, last_response.status
     assert_equal 'not a right branch', last_response.body
@@ -98,7 +100,7 @@ class WebhookTest < Minitest::Test
         name: 'CI',
         head_branch: 'main',
         head_commit: {
-          author: {email: 'dev@example.com'},
+          author: { email: 'dev@example.com' },
           message: 'Test commit',
           id: 'abc123'
         }
@@ -111,7 +113,7 @@ class WebhookTest < Minitest::Test
 
     post '/event_handler/test_project',
          github_payload.to_json,
-         {'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json'}
+         { 'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 200, last_response.status
     assert_equal 'Deployment started!', last_response.body
@@ -125,12 +127,12 @@ class WebhookTest < Minitest::Test
         event: 'push',
         head_branch: 'main'
       },
-      repository: {full_name: 'user/test-repo'}
+      repository: { full_name: 'user/test-repo' }
     }
 
     post '/event_handler/test_project',
          github_payload.to_json,
-         {'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json'}
+         { 'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 200, last_response.status
     assert_equal 'not a github actions success', last_response.body
@@ -144,12 +146,12 @@ class WebhookTest < Minitest::Test
         event: 'push',
         head_branch: 'develop'  # Wrong branch
       },
-      repository: {full_name: 'user/test-repo'}
+      repository: { full_name: 'user/test-repo' }
     }
 
     post '/event_handler/test_project',
          github_payload.to_json,
-         {'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json'}
+         { 'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 200, last_response.status
     assert_equal 'not a right branch', last_response.body
@@ -158,7 +160,7 @@ class WebhookTest < Minitest::Test
   def test_unknown_event_type
     post '/event_handler/test_project',
          '{}',
-         {'HTTP_X_GITHUB_EVENT' => 'unknown_event', 'CONTENT_TYPE' => 'application/json'}
+         { 'HTTP_X_GITHUB_EVENT' => 'unknown_event', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 400, last_response.status
     assert_equal 'Unsupported GitHub event: unknown_event', last_response.body
@@ -166,8 +168,8 @@ class WebhookTest < Minitest::Test
 
   def test_nonexistent_project
     post '/event_handler/nonexistent_project',
-         {payload: '{}'}.to_json,
-         {'HTTP_X_GITHUB_EVENT' => 'status'}
+         { payload: '{}' }.to_json,
+         { 'HTTP_X_GITHUB_EVENT' => 'status' }
 
     assert_equal 404, last_response.status
     assert_equal 'nonexistent_project not found!', last_response.body

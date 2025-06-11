@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
 require 'logger'
 
@@ -6,14 +8,14 @@ module Services
   class Deploy
     private
 
-    def send_email(failed_command: nil, exitstatus: nil)
+    def send_email(failed_command: nil, exitstatus: nil) # rubocop:disable Lint/UnusedMethodArgument
       # Mock email sending in tests
       puts "Mock email: #{failed_command ? 'failed' : 'success'}"
     end
 
     def notify_slack
-      # Mock slack notification in tests  
-      puts "Mock slack notification"
+      # Mock slack notification in tests
+      puts 'Mock slack notification'
     end
   end
 end
