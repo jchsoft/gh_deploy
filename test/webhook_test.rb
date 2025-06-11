@@ -58,7 +58,9 @@ class WebhookTest < Minitest::Test
 
     puts "Response: #{last_response.status} - #{last_response.body}" if last_response.status != 200
     assert_equal 200, last_response.status
-    assert_equal 'Deployment started!', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'success', response_data['status']
+    assert_equal 'Deployment started!', response_data['message']
   end
 
   def test_circleci_wrong_context
@@ -73,7 +75,9 @@ class WebhookTest < Minitest::Test
          { 'HTTP_X_GITHUB_EVENT' => 'status' }
 
     assert_equal 200, last_response.status
-    assert_equal 'not a circleCi success', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'ignored', response_data['status']
+    assert_equal 'not a CircleCI success', response_data['reason']
   end
 
   def test_circleci_wrong_branch
@@ -88,7 +92,9 @@ class WebhookTest < Minitest::Test
          { 'HTTP_X_GITHUB_EVENT' => 'status' }
 
     assert_equal 200, last_response.status
-    assert_equal 'not a right branch', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'ignored', response_data['status']
+    assert_equal 'not the right branch', response_data['reason']
   end
 
   def test_github_actions_success_webhook
@@ -116,7 +122,9 @@ class WebhookTest < Minitest::Test
          { 'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 200, last_response.status
-    assert_equal 'Deployment started!', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'success', response_data['status']
+    assert_equal 'Deployment started!', response_data['message']
   end
 
   def test_github_actions_wrong_conclusion
@@ -135,7 +143,9 @@ class WebhookTest < Minitest::Test
          { 'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 200, last_response.status
-    assert_equal 'not a github actions success', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'ignored', response_data['status']
+    assert_equal 'not a GitHub Actions success', response_data['reason']
   end
 
   def test_github_actions_wrong_branch
@@ -154,7 +164,9 @@ class WebhookTest < Minitest::Test
          { 'HTTP_X_GITHUB_EVENT' => 'workflow_run', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 200, last_response.status
-    assert_equal 'not a right branch', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'ignored', response_data['status']
+    assert_equal 'not the right branch', response_data['reason']
   end
 
   def test_unknown_event_type
@@ -163,7 +175,9 @@ class WebhookTest < Minitest::Test
          { 'HTTP_X_GITHUB_EVENT' => 'unknown_event', 'CONTENT_TYPE' => 'application/json' }
 
     assert_equal 400, last_response.status
-    assert_equal 'Unsupported GitHub event: unknown_event', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'Unsupported GitHub event', response_data['error']
+    assert_equal 'unknown_event', response_data['event']
   end
 
   def test_nonexistent_project
@@ -172,6 +186,8 @@ class WebhookTest < Minitest::Test
          { 'HTTP_X_GITHUB_EVENT' => 'status' }
 
     assert_equal 404, last_response.status
-    assert_equal 'nonexistent_project not found!', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'Project not found', response_data['error']
+    assert_equal 'nonexistent_project', response_data['project']
   end
 end

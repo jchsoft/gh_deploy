@@ -8,6 +8,22 @@ require_relative 'lib/http_status'
 
 set :server, :puma
 
+# Set content type to JSON for API responses
+before do
+  content_type :json if request.path_info.start_with?('/event_handler')
+end
+
+# Error handlers for JSON responses
+error JSON::ParserError do
+  status 400
+  { error: 'Invalid JSON in request body', message: env['sinatra.error'].message }.to_json
+end
+
+error do
+  status 500
+  { error: 'Internal server error', message: env['sinatra.error']&.message || 'Unknown error' }.to_json
+end
+
 # Optional GitHub webhook signature validation
 def verify_signature(payload_body, signature)
   return true unless $config[:github_webhook_secret]
@@ -20,7 +36,9 @@ end
 post '/event_handler/:project' do
   $logger.info "for: #{params['project']}"
 
-  halt NOT_FOUND, "#{params['project']} not found!" unless $config[:projects][params['project'].to_sym]
+  unless $config[:projects][params['project'].to_sym]
+    halt NOT_FOUND, { error: 'Project not found', project: params['project'] }.to_json
+  end
 
   github_event = request.env['HTTP_X_GITHUB_EVENT']
   $logger.info "GitHub event: #{github_event}"
@@ -28,16 +46,25 @@ post '/event_handler/:project' do
   case github_event
   when 'status'
     # Handle CircleCI status events (existing logic)
-    halt BAD_REQUEST, 'payload in data not found!' unless params['payload']
+    unless params['payload']
+      halt BAD_REQUEST, { error: 'Missing payload parameter' }.to_json
+    end
+    
     payload = JSON.parse(params['payload'])
     $logger.info "payload commit: #{payload['commit'].inspect}"
 
     deploy = Services::Deploy.new params['project'], payload, 'circleci'
 
-    halt OK, 'not a circleCi success' unless deploy.circle_ci_success?
-    halt OK, 'not a right branch' unless deploy.right_branch?
+    unless deploy.circle_ci_success?
+      halt OK, { status: 'ignored', reason: 'not a CircleCI success' }.to_json
+    end
+    
+    unless deploy.right_branch?
+      halt OK, { status: 'ignored', reason: 'not the right branch' }.to_json
+    end
 
-    deploy.update!
+    result = deploy.update!
+    { status: 'success', message: result }.to_json
 
   when 'workflow_run'
     # Handle GitHub Actions workflow_run events
@@ -45,7 +72,9 @@ post '/event_handler/:project' do
 
     # Optional signature validation
     signature = request.env['HTTP_X_HUB_SIGNATURE_256']
-    halt UNAUTHORIZED, 'Invalid signature' unless verify_signature(payload_body, signature)
+    unless verify_signature(payload_body, signature)
+      halt UNAUTHORIZED, { error: 'Invalid webhook signature' }.to_json
+    end
 
     payload = JSON.parse(payload_body)
     $logger.info "workflow_run payload: action=#{payload['action']}, conclusion=#{payload['workflow_run']['conclusion']}, event=#{payload['workflow_run']['event']}"
@@ -53,12 +82,18 @@ post '/event_handler/:project' do
 
     deploy = Services::Deploy.new params['project'], payload, 'github_actions'
 
-    halt OK, 'not a github actions success' unless deploy.github_actions_success?
-    halt OK, 'not a right branch' unless deploy.right_branch?
+    unless deploy.github_actions_success?
+      halt OK, { status: 'ignored', reason: 'not a GitHub Actions success' }.to_json
+    end
+    
+    unless deploy.right_branch?
+      halt OK, { status: 'ignored', reason: 'not the right branch' }.to_json
+    end
 
-    deploy.update!
+    result = deploy.update!
+    { status: 'success', message: result }.to_json
 
   else
-    halt BAD_REQUEST, "Unsupported GitHub event: #{github_event}"
+    halt BAD_REQUEST, { error: 'Unsupported GitHub event', event: github_event }.to_json
   end
 end

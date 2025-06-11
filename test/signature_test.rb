@@ -59,7 +59,9 @@ class SignatureTest < Minitest::Test
          valid_signature_headers(signature)
 
     assert_equal 200, last_response.status
-    assert_equal 'Deployment started!', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'success', response_data['status']
+    assert_equal 'Deployment started!', response_data['message']
   end
 
   def test_invalid_signature
@@ -72,7 +74,8 @@ class SignatureTest < Minitest::Test
          invalid_signature_headers(invalid_signature)
 
     assert_equal 401, last_response.status
-    assert_equal 'Invalid signature', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'Invalid webhook signature', response_data['error']
   end
 
   def test_missing_signature_header
@@ -83,7 +86,8 @@ class SignatureTest < Minitest::Test
          missing_signature_headers
 
     assert_equal 401, last_response.status
-    assert_equal 'Invalid signature', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'Invalid webhook signature', response_data['error']
   end
 
   def test_signature_validation_disabled
@@ -96,7 +100,9 @@ class SignatureTest < Minitest::Test
          disabled_validation_headers
 
     assert_equal 200, last_response.status
-    assert_equal 'Deployment started!', last_response.body
+    response_data = JSON.parse(last_response.body)
+    assert_equal 'success', response_data['status']
+    assert_equal 'Deployment started!', response_data['message']
   end
 
   private
