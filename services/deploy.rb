@@ -80,9 +80,7 @@ module Services
     private
 
     def send_email(failed_command: nil, exitstatus: nil)
-      subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{if exitstatus
-                                                                                                                                                                              " with exitstatus #{exitstatus}"
-                                                                                                                                                                            end}!"
+      subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{exitstatus ? " with exitstatus #{exitstatus}" : ''}!"
 
       case @ci_type
       when 'circleci'
@@ -96,9 +94,12 @@ module Services
         commit = {}
       end
 
+      recipients = ($config[:mail_to] << author).uniq
+      $logger.debug "Sending email to #{recipients.inspect} with subject '#{subject_text}'"
+
       Mail.deliver do
         from 'notification@jchsoft.cz'
-        to ($config[:mail_to] << author).uniq
+        to recipients
         subject subject_text
         body JSON.pretty_generate(commit)
       end
