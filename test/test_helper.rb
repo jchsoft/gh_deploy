@@ -8,7 +8,7 @@ module Services
   class Deploy
     private
 
-    def send_email(failed_command: nil, exitstatus: nil) # rubocop:disable Lint/UnusedMethodArgument
+    def send_email(failed_command: nil, exitstatus: nil, command_output: nil) # rubocop:disable Lint/UnusedMethodArgument
       # Mock email sending in tests
       puts "Mock email: #{failed_command ? 'failed' : 'success'}"
     end

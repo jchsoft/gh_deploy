@@ -65,10 +65,12 @@ module Services
           $config[:projects][@project.to_sym][:commands].each do |command|
             next unless command.key?('run')
 
-            $logger.debug `#{command['run']}`
+            command_output = `#{command['run']}`
+            $logger.debug command_output
             next unless $CHILD_STATUS.exitstatus.to_i != 0
 
-            send_email failed_command: command['run'], exitstatus: $CHILD_STATUS.exitstatus
+            send_email failed_command: command['run'], exitstatus: $CHILD_STATUS.exitstatus,
+                       command_output: command_output
             deploy_failed = true
             break
           end
@@ -81,7 +83,7 @@ module Services
 
     private
 
-    def send_email(failed_command: nil, exitstatus: nil)
+    def send_email(failed_command: nil, exitstatus: nil, command_output: nil)
       subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{if exitstatus
                                                                                                                                                                               " with exitstatus #{exitstatus}" end}!"
 
@@ -101,11 +103,27 @@ module Services
       recipients = ($config[:mail_to] << author).uniq.grep(VALID_EMAIL_REGEX)
       $logger.debug "Sending email to #{recipients.inspect} with subject '#{subject_text}'"
 
+      # Build email body with commit info and optional error details
+      email_body = if failed_command && command_output
+                     <<~EMAIL
+                       #{JSON.pretty_generate(commit)}
+
+                       --- DEPLOYMENT FAILURE DETAILS ---
+                       Failed Command: #{failed_command}
+                       Exit Status: #{exitstatus}
+
+                       Command Output:
+                       #{command_output}
+                     EMAIL
+                   else
+                     JSON.pretty_generate(commit)
+                   end
+
       Mail.deliver do
         from 'notification@jchsoft.cz'
         to recipients
         subject subject_text
-        body JSON.pretty_generate(commit)
+        body email_body
       end
     end
 

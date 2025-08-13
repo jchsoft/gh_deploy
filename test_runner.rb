@@ -16,4 +16,7 @@ system('ruby -Itest test/real_github_test.rb')
 puts "\n📧 Running email validation tests..."
 system('ruby -Itest test/email_validation_test.rb')
 
+puts "\n🚨 Running error reporting tests..."
+system('ruby -Itest test/error_reporting_test.rb')
+
 puts "\n✅ All tests completed!"
