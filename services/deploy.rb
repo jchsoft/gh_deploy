@@ -15,6 +15,8 @@ end
 module Services
   # Handles deployment operations for CI/CD webhooks
   class Deploy
+    VALID_EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
+
     class << self
     end
 
@@ -80,7 +82,8 @@ module Services
     private
 
     def send_email(failed_command: nil, exitstatus: nil)
-      subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{exitstatus ? " with exitstatus #{exitstatus}" : ''}!"
+      subject_text = "Deployment of #{@project} #{$config[:projects][@project.to_sym][:branch]} #{failed_command ? 'failed on ' : 'was'} #{failed_command || 'successful'}#{if exitstatus
+                                                                                                                                                                              " with exitstatus #{exitstatus}" end}!"
 
       case @ci_type
       when 'circleci'
@@ -94,7 +97,8 @@ module Services
         commit = {}
       end
 
-      recipients = ($config[:mail_to] << author).uniq
+      # Filter out invalid email addresses (like dependabot bot emails)
+      recipients = ($config[:mail_to] << author).uniq.grep(VALID_EMAIL_REGEX)
       $logger.debug "Sending email to #{recipients.inspect} with subject '#{subject_text}'"
 
       Mail.deliver do

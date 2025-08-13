@@ -13,4 +13,7 @@ system('ruby -Itest test/json_error_test.rb')
 puts "\n🔄 Running real GitHub Actions webhook tests..."
 system('ruby -Itest test/real_github_test.rb')
 
+puts "\n📧 Running email validation tests..."
+system('ruby -Itest test/email_validation_test.rb')
+
 puts "\n✅ All tests completed!"
