@@ -42,16 +42,31 @@ module Services
         workflow_run['event'] == 'push'
     end
 
+    def signoff_success?
+      check_run = @payload['check_run']
+      return false unless check_run
+
+      @payload['action'] == 'completed' &&
+        check_run['conclusion'] == 'success' &&
+        check_run['name'] == 'signoff'
+    end
+
     def right_branch?
+      target_branch = $config[:projects][@project.to_sym][:branch]
+
       case @ci_type
       when 'circleci'
-        @payload['branches'].any? { |k| k['name'] == $config[:projects][@project.to_sym][:branch] }
+        @payload['branches'].any? { |k| k['name'] == target_branch }
       when 'github_actions'
         workflow_run = @payload['workflow_run']
         return false unless workflow_run
 
-        target_branch = $config[:projects][@project.to_sym][:branch]
         workflow_run['head_branch'] == target_branch
+      when 'signoff'
+        check_run = @payload['check_run']
+        return false unless check_run
+
+        check_run.dig('check_suite', 'head_branch') == target_branch
       else
         false
       end
@@ -94,6 +109,11 @@ module Services
       when 'github_actions'
         author = @payload['workflow_run']['head_commit']['author']['email']
         commit = @payload['workflow_run']['head_commit']
+      when 'signoff'
+        # check_run payload has limited commit info, use sender and check_run details
+        sender_login = @payload.dig('sender', 'login')
+        author = @payload.dig('sender', 'email') || "#{sender_login}@users.noreply.github.com"
+        commit = { 'sha' => @payload.dig('check_run', 'head_sha'), 'message' => "Local CI signoff by #{sender_login}" }
       else
         author = 'unknown@example.com'
         commit = {}
@@ -140,6 +160,10 @@ module Services
       when 'github_actions'
         author = @payload['workflow_run']['head_commit']['author']['email']
         commit = @payload['workflow_run']['head_commit']['message']
+      when 'signoff'
+        sender_login = @payload.dig('sender', 'login')
+        author = @payload.dig('sender', 'email') || "#{sender_login}@users.noreply.github.com"
+        commit = "Local CI signoff by #{sender_login}"
       else
         author = 'unknown@example.com'
         commit = 'Unknown commit'

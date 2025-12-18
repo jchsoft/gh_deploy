@@ -68,7 +68,7 @@ post '/event_handler/:project' do
 
   when 'workflow_run'
     # Handle GitHub Actions workflow_run events
-    
+
     # Handle both raw JSON and URL-encoded form data
     if params['payload']
       # URL-encoded form data (GitHub webhook configuration sends payload parameter)
@@ -94,7 +94,40 @@ post '/event_handler/:project' do
     unless deploy.github_actions_success?
       halt OK, { status: 'ignored', reason: 'not a GitHub Actions success' }.to_json
     end
-    
+
+    unless deploy.right_branch?
+      halt OK, { status: 'ignored', reason: 'not the right branch' }.to_json
+    end
+
+    result = deploy.update!
+    { status: 'success', message: result }.to_json
+
+  when 'check_run'
+    # Handle gh-signoff check_run events (local CI)
+
+    if params['payload']
+      payload = JSON.parse(params['payload'])
+      signature_body = params['payload']
+    else
+      payload_body = request.body.read
+      payload = JSON.parse(payload_body)
+      signature_body = payload_body
+    end
+
+    signature = request.env['HTTP_X_HUB_SIGNATURE_256']
+    unless verify_signature(signature_body, signature)
+      halt UNAUTHORIZED, { error: 'Invalid webhook signature' }.to_json
+    end
+    check_run = payload['check_run']
+    $logger.info "check_run payload: action=#{payload['action']}, name=#{check_run['name']}, conclusion=#{check_run['conclusion']}"
+    $logger.info "repository: #{payload['repository']['full_name']}"
+
+    deploy = Services::Deploy.new params['project'], payload, 'signoff'
+
+    unless deploy.signoff_success?
+      halt OK, { status: 'ignored', reason: 'not a signoff success' }.to_json
+    end
+
     unless deploy.right_branch?
       halt OK, { status: 'ignored', reason: 'not the right branch' }.to_json
     end
