@@ -45,20 +45,25 @@ post '/event_handler/:project' do
 
   case github_event
   when 'status'
-    # Handle CircleCI status events (existing logic)
+    # Handle CircleCI and gh-signoff status events
     unless params['payload']
       halt BAD_REQUEST, { error: 'Missing payload parameter' }.to_json
     end
-    
+
     payload = JSON.parse(params['payload'])
+    $logger.info "status payload: context=#{payload['context']}, state=#{payload['state']}"
     $logger.info "payload commit: #{payload['commit'].inspect}"
 
-    deploy = Services::Deploy.new params['project'], payload, 'circleci'
+    # Determine CI type based on context
+    ci_type = payload['context'] == 'signoff' ? 'signoff_status' : 'circleci'
+    deploy = Services::Deploy.new params['project'], payload, ci_type
 
-    unless deploy.circle_ci_success?
-      halt OK, { status: 'ignored', reason: 'not a CircleCI success' }.to_json
+    # Check success based on CI type
+    success = ci_type == 'signoff_status' ? deploy.signoff_status_success? : deploy.circle_ci_success?
+    unless success
+      halt OK, { status: 'ignored', reason: "not a #{ci_type} success" }.to_json
     end
-    
+
     unless deploy.right_branch?
       halt OK, { status: 'ignored', reason: 'not the right branch' }.to_json
     end

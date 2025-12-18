@@ -33,6 +33,10 @@ module Services
       @payload['context'] == 'ci/circleci: build' && @payload['state'] == 'success'
     end
 
+    def signoff_status_success?
+      @payload['context'] == 'signoff' && @payload['state'] == 'success'
+    end
+
     def github_actions_success?
       workflow_run = @payload['workflow_run']
       return false unless workflow_run
@@ -55,8 +59,8 @@ module Services
       target_branch = $config[:projects][@project.to_sym][:branch]
 
       case @ci_type
-      when 'circleci'
-        @payload['branches'].any? { |k| k['name'] == target_branch }
+      when 'circleci', 'signoff_status'
+        @payload['branches'].any? { |b| b['name'] == target_branch }
       when 'github_actions'
         workflow_run = @payload['workflow_run']
         return false unless workflow_run
@@ -106,6 +110,9 @@ module Services
       when 'circleci'
         author = @payload['commit']['commit']['author']['email']
         commit = @payload['commit']['commit']
+      when 'signoff_status'
+        author = @payload['commit']['commit']['author']['email']
+        commit = @payload['commit']['commit'].merge('signoff' => "Local CI signoff: #{@payload['description']}")
       when 'github_actions'
         author = @payload['workflow_run']['head_commit']['author']['email']
         commit = @payload['workflow_run']['head_commit']
@@ -157,6 +164,9 @@ module Services
       when 'circleci'
         author = @payload['commit']['commit']['author']['email']
         commit = @payload['commit']['commit']['message']
+      when 'signoff_status'
+        author = @payload['commit']['commit']['author']['email']
+        commit = "#{@payload['commit']['commit']['message']} (#{@payload['description']})"
       when 'github_actions'
         author = @payload['workflow_run']['head_commit']['author']['email']
         commit = @payload['workflow_run']['head_commit']['message']
